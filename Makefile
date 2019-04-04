@@ -61,6 +61,10 @@ CC= gcc -O3
 # Remove #'s from following 3 lines for LINUX with OpenGL GLUT graphics.
 # The graphics are on a second thread, so pthreads are needed.
 # NOTE: -DPTRHEADS is necessary with glutgraph.o.
+# CFLAGS= -DLINUX -DMAXCOORD=4 -DOOGL -DMETIS -DUSE_READLINE -DPTHREADS -I/home/xinmm/Documents/evolver_source/libmetis/include
+# GRAPH= glutgraph.o
+# GRAPHLIB= -lreadline -lcurses -lmetis -lGL -lGLU -lglut -lpthread -L/home/xinmm/Documents/evolver_source/libmetis/lib -L/usr/X11R6/lib -L/usr/lib/curses-lXi -lXmu -lX11
+
 #CFLAGS= -DLINUX -DOOGL -DPTHREADS
 #GRAPH= glutgraph.o 
 #GRAPHLIB= -lGL -lGLU -lglut -lpthread
@@ -98,10 +102,11 @@ CC= gcc -O3
 
 # Remove #'s from following 5 lines for MAC OSX with OpenGL GLUT graphics.
 #INC=/System/Library/Frameworks/GLUT.framework/Versions/A/Headers
-CFLAGS= -DLINUX -DMAXCOORD=3 -DPTHREADS -DOOGL -DMAC_OS_X -DUSE_READLINE -DSDIM=3 # -I$(INC)
-GRAPH= glutgraph.o
-GLDIR=/System/Library/Frameworks/OpenGL.framework/Libraries
-GRAPHLIB= -L$(GLDIR) -framework GLUT -framework OpenGL -lGL -lGLU -lobjc -lcurses -lreadline
+
+#CFLAGS= -DLINUX -DMAXCOORD=3 -DPTHREADS -DOOGL -DMAC_OS_X -DUSE_READLINE -DSDIM=3 # -I$(INC)
+#GRAPH= glutgraph.o
+#GLDIR=/System/Library/Frameworks/OpenGL.framework/Libraries
+#GRAPHLIB= -L$(GLDIR) -framework GLUT -framework OpenGL -lGL -lGLU -lobjc -lcurses -lreadline
 
 # Note: to get backward compatibility to older versions of Mac OSX, 
 # add this to CFLAGS:   -mmacosx-version-min=10.4
