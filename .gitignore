@@ -1,0 +1,4 @@
+makemark
+*.o
+evolver
+.vscode*
