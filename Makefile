@@ -34,7 +34,7 @@ SHELL= /bin/sh
 # Can also add -DLONGDOUBLE to use the long double floating point datatype
 # (but that is slower and not recommended for general use).
 
-CC= gcc -O3 
+CC= gcc -O3 -march=native -fprofile-generate -flto
 
 #---------------------Start of system choices---------------------------------
 
@@ -61,9 +61,9 @@ CC= gcc -O3
 # Remove #'s from following 3 lines for LINUX with OpenGL GLUT graphics.
 # The graphics are on a second thread, so pthreads are needed.
 # NOTE: -DPTRHEADS is necessary with glutgraph.o.
-# CFLAGS= -DLINUX -DMAXCOORD=4 -DOOGL -DMETIS -DUSE_READLINE -DPTHREADS -I/home/xinmm/Documents/evolver_source/libmetis/include
+# CFLAGS= -DLINUX -DMAXCOORD=4 -DSDIM=3 -DOOGL -DMETIS -DUSE_READLINE -DPTHREADS -I./libmetis/include
 # GRAPH= glutgraph.o
-# GRAPHLIB= -lreadline -lcurses -lmetis -lGL -lGLU -lglut -lpthread -L/home/xinmm/Documents/evolver_source/libmetis/lib -L/usr/X11R6/lib -L/usr/lib/curses-lXi -lXmu -lX11
+# GRAPHLIB= -lreadline -lcurses -lmetis -lGL -lGLU -lglut -lpthread -L./libmetis/lib -L/usr/X11R6/lib -L/usr/lib/curses-lXi -lXmu -lX11
 
 #CFLAGS= -DLINUX -DOOGL -DPTHREADS
 #GRAPH= glutgraph.o 
