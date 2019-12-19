@@ -118,7 +118,7 @@ REAL SVK_all(
   REAL ddpsirdc12dc11, ddpsirdc12dc12, ddpsirdc12dc21, ddpsirdc12dc22;
   REAL ddpsirdc21dc11, ddpsirdc21dc12, ddpsirdc21dc21, ddpsirdc21dc22;
   REAL ddpsirdc22dc11, ddpsirdc22dc12, ddpsirdc22dc21, ddpsirdc22dc22;
-
+  REAL coeff1,coeff2;
   int i,j,ii,jj;
   
   lambda = *(REAL*)get_extra(f_info->id,lambda_attr);
@@ -137,7 +137,8 @@ REAL SVK_all(
      }
 
   area = sqrt(det)/2.0;
-  
+  coeff1 = area * mu / 4.0;
+  coeff2 = lambda/8.0 * area;
   q11 = s[2]/det; q12 = -s[1]/det; q22 = s[0]/det;
 
   side = f_info->sides[0];
@@ -145,19 +146,14 @@ REAL SVK_all(
   f12 = SDIM_dot(side[0],side[1]);
   f22 = SDIM_dot(side[1],side[1]);
 
-  c11 = f11*q11 + f12*q12;
+  c11 = f11*q11 + f12*q12 - 1;
   c12 = f11*q12 + f12*q22;
   c21 = f12*q11 + f22*q12;
-  c22 = f12*q12 + f22*q22;
+  c22 = f12*q12 + f22*q22 - 1;
 
- /*
- This exression of the potential takes into account the plane stress condition : Sig33 = 0, 
- This condition leads to the expression of c33, which can be written as a
- function of c11 and c22 : c33 = -(lambda*(c11+c22-3)-2*mu)/(lambda+2*mu)
- */
-
-  energy =area*((2.0*mu+3.0*lambda)*alpha*theta*(-(2.0*mu+3.0*lambda)*alpha*theta-2.0*mu*(c11+c22-2.0))+((c22*c22+c11*c11+2.0*c12*c21+2.0-2.0*c11-2.0*c22)*mu*mu+(c11*c22+c12*c21+c22*c22+c11*c11+3.0-3.0*c11-3.0*c22)*lambda*mu))/(2.0*lambda+4.0*mu);
-	      
+  energy = coeff1*(c11*c11+c12*c21+c12*c21+c22*c22)
+                 + coeff2*(c11+c22)*(c11+c22);
+                 
   if ( mode == METHOD_VALUE ) return energy;
 
   /* gradient */
@@ -177,18 +173,14 @@ REAL SVK_all(
      dc21dv[0][i] = -(dc21dv[1][i] + dc21dv[2][i]);
      dc22dv[0][i] = -(dc22dv[1][i] + dc22dv[2][i]);
   }
-	    
-  dpsirdc11 = mu*((2.0*c11-2.0)*mu+2.0*lambda*c11-3.0*lambda+lambda*c22-4.0*alpha*theta*mu-6.0*alpha*theta*lambda)/(lambda+2.0*mu)/2.0;
-  dpsirdc12 = mu*c21/2.0;
-  dpsirdc21 = mu*c12/2.0;
-  dpsirdc22 = mu*((2.0*c22-2.0)*mu+2.0*lambda*c22-3.0*lambda+lambda*c11-4.0*alpha*theta*mu-6.0*alpha*theta*lambda)/(lambda+2.0*mu)/2.0;
 
   for ( j = 0 ; j < FACET_VERTS  ; j++ )
      for ( i = 0 ; i < SDIM  ; i++ )
-     { f_info->grad[j][i] = area*(dpsirdc11*dc11dv[j][i]  
-                                 +dpsirdc12*dc12dv[j][i]
-                                 +dpsirdc21*dc21dv[j][i]
-                                 +dpsirdc22*dc22dv[j][i]);
+     { f_info->grad[j][i] = (coeff1*(2*c11*dc11dv[j][i]  
+                                 + 2*c12*dc21dv[j][i]
+                                 + 2*c21*dc12dv[j][i]
+                                 + 2*c22*dc22dv[j][i]) 
+                  + 2*coeff2*(c11+c22)*(dc11dv[j][i] +dc22dv[j][i]));
      }
 
   if ( mode == METHOD_GRADIENT ) return energy;
@@ -238,46 +230,170 @@ REAL SVK_all(
      ddc22dv[0][i][0] = -(ddc22dv[1][i][0] + ddc22dv[2][i][0]);
   }
 
-
-  ddpsirdc11dc11 = mu*(mu+lambda)/(lambda+2.0*mu);
-  ddpsirdc11dc12 = 0.0;
-  ddpsirdc11dc21 = 0.0 ;
-  ddpsirdc11dc22 = lambda*mu/(2.0*lambda+4.0*mu);
-
-  ddpsirdc12dc11 = 0.0;
-  ddpsirdc12dc12 = 0.0;
-  ddpsirdc12dc21 = mu/2.0;
-  ddpsirdc12dc22 = 0.0;
-
-  ddpsirdc21dc11 = 0.0;
-  ddpsirdc21dc12 = mu/2.0;
-  ddpsirdc21dc21 = 0.0;
-  ddpsirdc21dc22 = 0.0;
-
-  ddpsirdc22dc11 = mu*lambda/(2.0*lambda+4.0*mu);
-  ddpsirdc22dc12 = 0.0;
-  ddpsirdc22dc21 = 0.0;
-  ddpsirdc22dc22 = mu*(mu+lambda)/(lambda+2.0*mu) ; 
-
   for ( j = 0 ; j < FACET_VERTS  ; j++ )
      for ( i = 0 ; i < SDIM  ; i++ )
         for ( jj = 0 ; jj < FACET_VERTS  ; jj++ )
         {
           f_info->hess[j][jj][i][i] += 
-                  area*(dpsirdc11*ddc11dv[j][i][jj]
-                       +dpsirdc12*ddc21dv[j][i][jj]
-                       +dpsirdc21*ddc12dv[j][i][jj]
-                       +dpsirdc22*ddc22dv[j][i][jj]);
+                (coeff1*( 2*c11*ddc11dv[j][i][jj]
+                         + 2*c12*ddc21dv[j][i][jj]
+                         + 2*c21*ddc12dv[j][i][jj]
+                         + 2*c22*ddc22dv[j][i][jj]) 
+                 + 2*coeff2*(c11+c22)*(ddc11dv[j][i][jj]+ddc22dv[j][i][jj]));
 
           for ( ii = 0 ; ii < SDIM  ; ii++ )
              f_info->hess[j][jj][i][ii] += 
-            area*((ddpsirdc11dc11+ddpsirdc12dc11+ddpsirdc21dc11+ddpsirdc22dc11)*dc11dv[j][i] 
-                 +(ddpsirdc11dc12+ddpsirdc12dc12+ddpsirdc21dc12+ddpsirdc22dc12)*dc12dv[j][i]
-                 +(ddpsirdc11dc21+ddpsirdc12dc21+ddpsirdc21dc21+ddpsirdc22dc21)*dc21dv[j][i]
-                 +(ddpsirdc11dc22+ddpsirdc12dc22+ddpsirdc21dc22+ddpsirdc22dc22)*dc22dv[j][i]);
-        }
+                  (coeff1*(2*dc11dv[jj][ii]*dc11dv[j][i] 
+                          + 2*dc12dv[jj][ii]*dc21dv[j][i]
+                          + 2*dc21dv[jj][ii]*dc12dv[j][i]
+                          + 2*dc22dv[jj][ii]*dc22dv[j][i]
+                         ) 
+                  + 2*coeff2*(dc11dv[jj][ii]+dc22dv[jj][ii])
+                                     *(dc11dv[j][i] +dc22dv[j][i]));
+         }
 
   return energy;
+  
+//   q11 = s[2]/det; q12 = -s[1]/det; q22 = s[0]/det;
+
+//   side = f_info->sides[0];
+//   f11 = SDIM_dot(side[0],side[0]);
+//   f12 = SDIM_dot(side[0],side[1]);
+//   f22 = SDIM_dot(side[1],side[1]);
+
+//   c11 = f11*q11 + f12*q12;
+//   c12 = f11*q12 + f12*q22;
+//   c21 = f12*q11 + f22*q12;
+//   c22 = f12*q12 + f22*q22;
+
+ /*
+ This exression of the potential takes into account the plane stress condition : Sig33 = 0, 
+ This condition leads to the expression of c33, which can be written as a
+ function of c11 and c22 : c33 = -(lambda*(c11+c22-3)-2*mu)/(lambda+2*mu)
+ */
+
+//   energy =area*((2.0*mu+3.0*lambda)*alpha*theta*(-(2.0*mu+3.0*lambda)*alpha*theta-2.0*mu*(c11+c22-2.0))+((c22*c22+c11*c11+2.0*c12*c21+2.0-2.0*c11-2.0*c22)*mu*mu+(c11*c22+c12*c21+c22*c22+c11*c11+3.0-3.0*c11-3.0*c22)*lambda*mu))/(2.0*lambda+4.0*mu);
+	      
+//   if ( mode == METHOD_VALUE ) return energy;
+
+//   /* gradient */
+
+//   for ( i = 0 ; i < SDIM  ; i++ )
+//   {
+//      dc11dv[1][i] = 2*side[0][i]*q11 + side[1][i]*q12;
+//      dc11dv[2][i] =                          side[0][i]*q12;
+//      dc12dv[1][i] = 2*side[0][i]*q12 + side[1][i]*q22;
+//      dc12dv[2][i] =                          side[0][i]*q22;
+//      dc21dv[1][i] = side[1][i]*q11;
+//      dc21dv[2][i] = side[0][i]*q11 + 2*side[1][i]*q12;
+//      dc22dv[1][i] = side[1][i]*q12;
+//      dc22dv[2][i] = side[0][i]*q12 + 2*side[1][i]*q22;
+//      dc11dv[0][i] = -(dc11dv[1][i] + dc11dv[2][i]);
+//      dc12dv[0][i] = -(dc12dv[1][i] + dc12dv[2][i]);
+//      dc21dv[0][i] = -(dc21dv[1][i] + dc21dv[2][i]);
+//      dc22dv[0][i] = -(dc22dv[1][i] + dc22dv[2][i]);
+//   }
+	    
+//   dpsirdc11 = mu*((2.0*c11-2.0)*mu+2.0*lambda*c11-3.0*lambda+lambda*c22-4.0*alpha*theta*mu-6.0*alpha*theta*lambda)/(lambda+2.0*mu)/2.0;
+//   dpsirdc12 = mu*c21/2.0;
+//   dpsirdc21 = mu*c12/2.0;
+//   dpsirdc22 = mu*((2.0*c22-2.0)*mu+2.0*lambda*c22-3.0*lambda+lambda*c11-4.0*alpha*theta*mu-6.0*alpha*theta*lambda)/(lambda+2.0*mu)/2.0;
+
+//   for ( j = 0 ; j < FACET_VERTS  ; j++ )
+//      for ( i = 0 ; i < SDIM  ; i++ )
+//      { f_info->grad[j][i] = area*(dpsirdc11*dc11dv[j][i]  
+//                                  +dpsirdc12*dc12dv[j][i]
+//                                  +dpsirdc21*dc21dv[j][i]
+//                                  +dpsirdc22*dc22dv[j][i]);
+//     }
+
+//   if ( mode == METHOD_GRADIENT ) return energy;
+
+//   /* hessian */
+
+//   for ( i = 0 ; i < SDIM  ; i++ )
+//   {
+//      ddc11dv[1][i][1] = 2*q11;
+//      ddc11dv[1][i][2] = q12;
+
+//      ddc11dv[2][i][1] = q12;
+//      ddc11dv[2][i][2] = 0.0;
+
+//      ddc12dv[1][i][1] = 2*q12;
+//      ddc12dv[1][i][2] = q22;
+
+//      ddc12dv[2][i][1] = q22;
+//      ddc12dv[2][i][2] = 0.0;
+
+//      ddc21dv[1][i][1] = 0.0;
+//      ddc21dv[1][i][2] = q11;
+
+//      ddc21dv[2][i][1] = q11;
+//      ddc21dv[2][i][2] = 2*q12;
+
+//      ddc22dv[1][i][1] = 0.0;
+//      ddc22dv[1][i][2] = q12;
+
+//      ddc22dv[2][i][1] = q12;
+//      ddc22dv[2][i][2] = 2*q22;
+
+//      for ( j = 1 ; j < FACET_VERTS;  j++ )
+//      { 
+//         ddc11dv[0][i][j] = -(ddc11dv[1][i][j] + ddc11dv[2][i][j]);
+//         ddc12dv[0][i][j] = -(ddc12dv[1][i][j] + ddc12dv[2][i][j]);
+//         ddc21dv[0][i][j] = -(ddc21dv[1][i][j] + ddc21dv[2][i][j]);
+//         ddc22dv[0][i][j] = -(ddc22dv[1][i][j] + ddc22dv[2][i][j]);
+//         ddc11dv[j][i][0] = -(ddc11dv[j][i][1] + ddc11dv[j][i][2]);
+//         ddc12dv[j][i][0] = -(ddc12dv[j][i][1] + ddc12dv[j][i][2]);
+//         ddc21dv[j][i][0] = -(ddc21dv[j][i][1] + ddc21dv[j][i][2]);
+//         ddc22dv[j][i][0] = -(ddc22dv[j][i][1] + ddc22dv[j][i][2]);
+//      }
+//      ddc11dv[0][i][0] = -(ddc11dv[1][i][0] + ddc11dv[2][i][0]);
+//      ddc12dv[0][i][0] = -(ddc12dv[1][i][0] + ddc12dv[2][i][0]);
+//      ddc21dv[0][i][0] = -(ddc21dv[1][i][0] + ddc21dv[2][i][0]);
+//      ddc22dv[0][i][0] = -(ddc22dv[1][i][0] + ddc22dv[2][i][0]);
+//   }
+
+
+//   ddpsirdc11dc11 = mu*(mu+lambda)/(lambda+2.0*mu);
+//   ddpsirdc11dc12 = 0.0;
+//   ddpsirdc11dc21 = 0.0 ;
+//   ddpsirdc11dc22 = lambda*mu/(2.0*lambda+4.0*mu);
+
+//   ddpsirdc12dc11 = 0.0;
+//   ddpsirdc12dc12 = 0.0;
+//   ddpsirdc12dc21 = mu/2.0;
+//   ddpsirdc12dc22 = 0.0;
+
+//   ddpsirdc21dc11 = 0.0;
+//   ddpsirdc21dc12 = mu/2.0;
+//   ddpsirdc21dc21 = 0.0;
+//   ddpsirdc21dc22 = 0.0;
+
+//   ddpsirdc22dc11 = mu*lambda/(2.0*lambda+4.0*mu);
+//   ddpsirdc22dc12 = 0.0;
+//   ddpsirdc22dc21 = 0.0;
+//   ddpsirdc22dc22 = mu*(mu+lambda)/(lambda+2.0*mu) ; 
+
+//   for ( j = 0 ; j < FACET_VERTS  ; j++ )
+//      for ( i = 0 ; i < SDIM  ; i++ )
+//         for ( jj = 0 ; jj < FACET_VERTS  ; jj++ )
+//         {
+//           f_info->hess[j][jj][i][i] += 
+//                   area*(dpsirdc11*ddc11dv[j][i][jj]
+//                        +dpsirdc12*ddc21dv[j][i][jj]
+//                        +dpsirdc21*ddc12dv[j][i][jj]
+//                        +dpsirdc22*ddc22dv[j][i][jj]);
+
+//           for ( ii = 0 ; ii < SDIM  ; ii++ )
+//              f_info->hess[j][jj][i][ii] += 
+//             area*((ddpsirdc11dc11+ddpsirdc12dc11+ddpsirdc21dc11+ddpsirdc22dc11)*dc11dv[j][i] 
+//                  +(ddpsirdc11dc12+ddpsirdc12dc12+ddpsirdc21dc12+ddpsirdc22dc12)*dc12dv[j][i]
+//                  +(ddpsirdc11dc21+ddpsirdc12dc21+ddpsirdc21dc21+ddpsirdc22dc21)*dc21dv[j][i]
+//                  +(ddpsirdc11dc22+ddpsirdc12dc22+ddpsirdc21dc22+ddpsirdc22dc22)*dc22dv[j][i]);
+//         }
+
+//   return energy;
 } // end SVK_all()
 
 /**************************************************************
